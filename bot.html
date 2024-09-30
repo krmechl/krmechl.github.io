@@ -1,11 +1,36 @@
 <!DOCTYPE html>
+
+<head>
+
+<script>
+  (function (w, d, s, o, f, js, fjs) {
+    w["botsonic_widget"] = o;
+    w[o] =
+      w[o] ||
+      function () {
+        (w[o].q = w[o].q || []).push(arguments);
+      };
+    (js = d.createElement(s)), (fjs = d.getElementsByTagName(s)[0]);
+    js.id = o;
+    js.src = f;
+    js.async = 1;
+    fjs.parentNode.insertBefore(js, fjs);
+  })(window, document, "script", "Botsonic", "https://widget.writesonic.com/CDN/botsonic.min.js");
+  Botsonic("init", {
+    serviceBaseUrl: "https://api-azure.botsonic.ai",
+    token: "ca91e352-4987-4f20-9277-2a7fbbbbb1d2",
+  });
+</script>
+
+</head>
+
 <html>
 <body>
 
 <h2>ALS AI Chatbot</h2>
 <p>Prototype for use with the ALS Global website and other relevant content</p>
 
-<iframe src="https://bot.writesonic.com/share/bot/397e449e-4340-4b8e-bd7d-89e4ef52913c" height="400" width="600" title="Iframe Example"></iframe>
+<iframe src="https://bot.writesonic.com/share/bot/397e449e-4340-4b8e-bd7d-89e4ef52913c" height="400" width="500" title="Iframe Example"></iframe>
 
 </body>
 </html>
