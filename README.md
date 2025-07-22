@@ -1,5 +1,6 @@
 # krmechl.github.io
 
 
+Concrete analysis app
 
-ALS AI CHATBOT
+(formerly  ALS AI CHATBOT)
