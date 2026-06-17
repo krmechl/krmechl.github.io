@@ -157,18 +157,20 @@
     <section class="card grid">
       <div>
         <label for="start"><strong>Start location</strong></label>
-        <input id="start" value="184 Pittsburgh Rd, 16001" />
+        <input id="start" value="Pittsburgh, PA 15222" />
         <div class="small" style="margin-top:6px">
           This is the fixed origin used for route optimization.
+<br>
+Change it as necessary.
         </div>
       </div>
 
       <div>
         <label for="fileInput"><strong>Load stops file</strong></label>
-        <input id="fileInput" type="file" accept=".csv,.txt,text/csv,text/plain" />
+        <input id="fileInput" type="file">
         <div class="small" style="margin-top:6px">
-          Select a local CSV or TXT file. The file should contain at least two columns:
-          address and zip. The app will use up to 25 stops.
+          Select a local CSV or TXT file. If no file is selected, Optimize route will use the built-in sample stops.
+<br><br>
         </div>
 
         <div class="button-row">
@@ -310,7 +312,6 @@
       const file = input.files && input.files[0];
 
       if (!file) {
-        alert('Please choose a .csv or .txt file first.');
         return [];
       }
 
@@ -350,33 +351,35 @@
       `;
     }
 
-    function openPopup(s) {
-      const q = encodeURIComponent(`${s.address}, ${s.zip}, PA`);
-      document.getElementById('popupTitle').textContent = `${s.address}, ${s.zip}`;
-      document.getElementById('popupFrame').src = `https://www.google.com/maps?q=${q}&output=embed`;
-      document.getElementById('popup').style.display = 'flex';
-    }
-
-    function closePopup() {
+    document.getElementById('closePopup').onclick = function () {
       document.getElementById('popup').style.display = 'none';
       document.getElementById('popupFrame').src = 'about:blank';
-    }
-
-    document.getElementById('closePopup').onclick = closePopup;
-    document.getElementById('popup').onclick = e => {
-      if (e.target.id === 'popup') closePopup();
     };
 
-    document.getElementById('loadBtn').onclick = async () => {
+    document.getElementById('popup').onclick = function (e) {
+      if (e.target.id === 'popup') {
+        document.getElementById('popup').style.display = 'none';
+        document.getElementById('popupFrame').src = 'about:blank';
+      }
+    };
+
+    document.getElementById('loadBtn').onclick = async function () {
       const parsed = await loadSelectedFile();
-      stops = parsed;
-      renderRoute(stops);
-      resetMapPreview();
+      if (parsed.length) {
+        stops = parsed;
+        renderRoute(stops);
+        resetMapPreview();
+      }
     };
 
-    document.getElementById('optBtn').onclick = async () => {
-      const parsed = loadedFileText ? parseStops(loadedFileText) : await loadSelectedFile();
-      if (!parsed.length) return;
+    document.getElementById('optBtn').onclick = async function () {
+      const hasLoadedFile = loadedFileText && loadedFileText.trim().length > 0;
+      const parsed = hasLoadedFile ? parseStops(loadedFileText) : exampleStops;
+
+      if (!parsed.length) {
+        alert('No stops available to optimize.');
+        return;
+      }
 
       stops = await optimizeFromOrigin(document.getElementById('start').value, parsed);
       renderRoute(stops);
@@ -386,11 +389,13 @@
       }
     };
 
-    document.getElementById('fileInput').addEventListener('change', async () => {
+    document.getElementById('fileInput').addEventListener('change', async function () {
       const parsed = await loadSelectedFile();
-      stops = parsed;
-      renderRoute(stops);
-      resetMapPreview();
+      if (parsed.length) {
+        stops = parsed;
+        renderRoute(stops);
+        resetMapPreview();
+      }
     });
 
     renderRoute(stops);
