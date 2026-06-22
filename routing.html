@@ -4,7 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ALS Labs / Field Route Planner</title>
-   <link rel="icon" type="image/png" sizes="32x32" href="als.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="als.png">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
   <style>
     body {
       font-family: system-ui, Arial, sans-serif;
@@ -108,7 +116,8 @@
       margin-top: 0;
     }
 
-    #popup {
+    #popup,
+    #routePopup {
       display: none;
       position: fixed;
       inset: 0;
@@ -119,7 +128,8 @@
       z-index: 9999;
     }
 
-    #popup .inner {
+    #popup .inner,
+    #routePopup .inner {
       background: #fff;
       max-width: 1100px;
       width: 100%;
@@ -128,7 +138,8 @@
       position: relative;
     }
 
-    #popupTop {
+    #popupTop,
+    #routePopupTop {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -140,19 +151,60 @@
       background: #fff;
     }
 
-    #popupFrame {
+    #popupFrame,
+    #routePopupFrame {
       width: 100%;
       height: 700px;
       border: 0;
       position: relative;
       z-index: 1;
     }
+
+    #routeMapContainer {
+      width: 100%;
+      height: 700px;
+      position: relative;
+    }
+
+    #routeOverlay {
+      position: absolute;
+      top: 12px;
+      left: 60px;
+      right: 12px;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      pointer-events: auto;
+      backdrop-filter: blur(4px);
+    }
+
+    #routeOverlayTitle {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    #routeOverlayClose {
+      width: auto;
+      margin: 0;
+      padding: 6px 12px;
+      line-height: 1;
+      border-radius: 999px;
+      background: #111827;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1 style="margin:0;font-size:20px">ALS Labs / Field  Route Planner&nbsp&nbsp&nbsp&nbsp<img src="als.png" alt="Company Logo" width="50" height="50"alt="icon" style="vertical-align: middle;" >
-
+    <h1 style="margin:0;font-size:20px">
+      ALS Labs / Field Route Planner&nbsp;&nbsp;&nbsp;&nbsp;
+      <img src="als.png" alt="Company Logo" width="50" height="50" style="vertical-align: middle;">
+    </h1>
   </header>
 
   <main>
@@ -162,8 +214,8 @@
         <input id="start" value="Pittsburgh, PA 15222" />
         <div class="small" style="margin-top:6px">
           This is the fixed origin used for route optimization.
-<br>
-Change it as necessary.
+          <br>
+          Change it as necessary.
         </div>
       </div>
 
@@ -172,13 +224,14 @@ Change it as necessary.
         <input id="fileInput" type="file">
         <div class="small" style="margin-top:6px">
           Select a local CSV or TXT file. If no file is selected, Optimize Route will use the built-in sample stops.
-<br><br>
+          <br><br>
         </div>
 
         <div class="button-row">
           <button id="loadBtn">Load Stops</button>
           <button class="secondary" id="optBtn">Optimize Route</button>
         </div>
+        <button class="secondary" id="routeMapBtn">Show Complete Route</button>
       </div>
 
       <div>
@@ -209,6 +262,25 @@ Change it as necessary.
     </div>
   </div>
 
+  <div id="routePopup">
+    <div class="inner">
+      <div id="routePopupTop">
+        <div id="routePopupTitle">Complete Route</div>
+        <button id="closeRoutePopup" style="width:auto;margin-top:0">Close</button>
+      </div>
+      <div id="routeMapContainer">
+        <div id="routeOverlay">
+          <div id="routeOverlayTitle">Complete Route</div>
+          <button id="routeOverlayClose">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+
   <script>
     const exampleStops = [
       { address: '1 Bigelow Sq', zip: '15219' },
@@ -221,6 +293,7 @@ Change it as necessary.
     let stops = [...exampleStops];
     let loadedFileText = '';
     const geocodeCache = new Map();
+    let routeMap = null;
 
     function renderRoute(list) {
       const el = document.getElementById('routeList');
@@ -312,27 +385,20 @@ Change it as necessary.
     async function loadSelectedFile() {
       const input = document.getElementById('fileInput');
       const file = input.files && input.files[0];
-
-      if (!file) {
-        return [];
-      }
+      if (!file) return [];
 
       const text = await file.text();
       loadedFileText = text;
       const parsed = parseStops(text);
 
-      if (!parsed.length) {
-        alert('The file did not contain any usable stops.');
-      }
+      if (!parsed.length) alert('The file did not contain any usable stops.');
 
       return parsed;
     }
 
     function showMapInPreview(s) {
       const q = encodeURIComponent(`${s.address}, ${s.zip}, PA`);
-      const map = document.getElementById('map');
-
-      map.innerHTML = `
+      document.getElementById('map').innerHTML = `
         <iframe
           id="previewFrame"
           src="https://www.google.com/maps?q=${q}&output=embed"
@@ -353,6 +419,88 @@ Change it as necessary.
       `;
     }
 
+    async function getRouteGeometry(points) {
+      if (points.length < 2) return [];
+
+      const coords = points.map(p => `${p.lon},${p.lat}`).join(';');
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.routes || !data.routes.length) return [];
+      return data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+    }
+
+    async function openRoutePopup(title, originGeo, orderedStops) {
+      document.getElementById('routePopupTitle').textContent = title;
+      document.getElementById('routeOverlayTitle').textContent = title;
+
+      const container = document.getElementById('routeMapContainer');
+      container.innerHTML = `
+        <div id="routeOverlay">
+          <div id="routeOverlayTitle">${title}</div>
+          <button id="routeOverlayClose">×</button>
+        </div>
+      `;
+
+      if (routeMap) {
+        routeMap.remove();
+        routeMap = null;
+      }
+
+      routeMap = L.map('routeMapContainer', {
+        scrollWheelZoom: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(routeMap);
+
+      const routePoints = [];
+      const markerPoints = [];
+
+      if (originGeo) {
+        routePoints.push({ lat: originGeo.lat, lon: originGeo.lon });
+        markerPoints.push([originGeo.lat, originGeo.lon, 'Start / End: ' + document.getElementById('start').value]);
+      }
+
+      orderedStops.forEach((s, idx) => {
+        routePoints.push({ lat: s.lat, lon: s.lon });
+        markerPoints.push([s.lat, s.lon, `${idx + 1}. ${s.address}, ${s.zip}`]);
+      });
+
+      markerPoints.forEach(([lat, lon, label]) => {
+        L.marker([lat, lon]).addTo(routeMap).bindPopup(label);
+      });
+
+      const geometry = await getRouteGeometry(routePoints);
+      const latLngs = geometry.length ? geometry : routePoints.map(p => [p.lat, p.lon]);
+
+      const routeLine = L.polyline(latLngs, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(routeMap);
+
+      document.getElementById('routePopup').style.display = 'flex';
+
+      setTimeout(() => {
+        routeMap.invalidateSize();
+        routeMap.fitBounds(routeLine.getBounds(), {
+          padding: [60, 60],
+          maxZoom: 12
+        });
+      }, 200);
+
+      const closeFn = () => {
+        document.getElementById('routePopup').style.display = 'none';
+        if (routeMap) {
+          routeMap.remove();
+          routeMap = null;
+        }
+        document.getElementById('routeMapContainer').innerHTML = '';
+      };
+
+      document.getElementById('routeOverlayClose').onclick = closeFn;
+    }
+
     document.getElementById('closePopup').onclick = function () {
       document.getElementById('popup').style.display = 'none';
       document.getElementById('popupFrame').src = 'about:blank';
@@ -362,6 +510,26 @@ Change it as necessary.
       if (e.target.id === 'popup') {
         document.getElementById('popup').style.display = 'none';
         document.getElementById('popupFrame').src = 'about:blank';
+      }
+    };
+
+    document.getElementById('closeRoutePopup').onclick = function () {
+      document.getElementById('routePopup').style.display = 'none';
+      if (routeMap) {
+        routeMap.remove();
+        routeMap = null;
+      }
+      document.getElementById('routeMapContainer').innerHTML = '';
+    };
+
+    document.getElementById('routePopup').onclick = function (e) {
+      if (e.target.id === 'routePopup') {
+        document.getElementById('routePopup').style.display = 'none';
+        if (routeMap) {
+          routeMap.remove();
+          routeMap = null;
+        }
+        document.getElementById('routeMapContainer').innerHTML = '';
       }
     };
 
@@ -389,6 +557,29 @@ Change it as necessary.
       if (stops.length) {
         showMapInPreview(stops[0]);
       }
+    };
+
+    document.getElementById('routeMapBtn').onclick = async function () {
+      const hasLoadedFile = loadedFileText && loadedFileText.trim().length > 0;
+      const parsed = hasLoadedFile ? parseStops(loadedFileText) : exampleStops;
+
+      if (!parsed.length) {
+        alert('No stops available to optimize.');
+        return;
+      }
+
+      const startText = document.getElementById('start').value;
+      const originGeo = await geocode(startText);
+
+      if (!originGeo) {
+        alert('Could not geocode the start location.');
+        return;
+      }
+
+      stops = await optimizeFromOrigin(startText, parsed);
+      renderRoute(stops);
+
+      openRoutePopup('Complete Route Overview', originGeo, stops);
     };
 
     document.getElementById('fileInput').addEventListener('change', async function () {
