@@ -1,281 +1,597 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Construction Concrete QA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ALS Labs / Field Route Planner</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="als.png">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
   <style>
     body {
-      background-color: #f4f6f8;
-      font-family: Arial, sans-serif;
+      font-family: system-ui, Arial, sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+      color: #1f2937;
     }
-    .chat-container {
-      max-width: 900px;
-      margin: 40px auto;
-      background: #ffffff;
+
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 16px 20px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    input,
+    button,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      font: inherit;
+    }
+
+    input,
+    textarea {
+      padding: 10px;
+      border: 1px solid #cbd5e1;
       border-radius: 8px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      height: 80vh;
+      margin-top: 6px;
     }
-    .chat-header {
-      background-color: #2c3e50;
-      color: white;
-      padding: 10px 20px;
+
+    button {
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    button.secondary {
+      background: #475569;
+    }
+
+    .stop {
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin: 8px 0;
+      cursor: pointer;
+    }
+
+    .stop:hover {
+      background: #f8fafc;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    #map {
+      height: 72vh;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .button-row button {
+      margin-top: 0;
+    }
+
+    #popup,
+    #routePopup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 9999;
+    }
+
+    #popup .inner,
+    #routePopup .inner {
+      background: #fff;
+      max-width: 1100px;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #popupTop,
+    #routePopupTop {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    .chat-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-    .chat-message {
-      margin: 10px 0;
-      display: flex;
-    }
-    .chat-message.user .message {
-      margin-left: auto;
-      background-color: #d1e9ff;
-      color: black;
-    }
-    .chat-message.ai .message {
-      margin-right: auto;
-      background-color: #e3fcef;
-      color: #1a472a;
-    }
-    .message {
       padding: 12px 16px;
-      border-radius: 12px;
-      max-width: 70%;
-      white-space: pre-wrap;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+      background: #fff;
     }
-    .chat-input {
-      padding: 16px;
-      border-top: 1px solid #ccc;
+
+    #popupFrame,
+    #routePopupFrame {
+      width: 100%;
+      height: 700px;
+      border: 0;
+      position: relative;
+      z-index: 1;
     }
-    .chat-buttons {
-      padding: 0 16px 8px;
+
+    #routeMapContainer {
+      width: 100%;
+      height: 700px;
+      position: relative;
+    }
+
+    #routeOverlay {
+      position: absolute;
+      top: 12px;
+      left: 60px;
+      right: 12px;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      pointer-events: auto;
+      backdrop-filter: blur(4px);
+    }
+
+    #routeOverlayTitle {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    #routeOverlayClose {
+      width: auto;
+      margin: 0;
+      padding: 6px 12px;
+      line-height: 1;
+      border-radius: 999px;
+      background: #111827;
     }
   </style>
 </head>
 <body>
+  <header>
+    <h1 style="margin:0;font-size:20px">
+      ALS Labs / Field Route Planner&nbsp;&nbsp;&nbsp;&nbsp;
+      <img src="als.png" alt="Company Logo" width="50" height="50" style="vertical-align: middle;">
+    </h1>
+  </header>
 
-<div class="chat-container">
-  <div class="chat-header">
-    <div><strong>Construction Concrete QA</strong></div>
-    <div class="d-flex align-items-center gap-2">Previous Analyses:
-      <select id="priorAnalysis" class="form-select form-select-sm" style="width:auto;"></select>
-      <button class="btn btn-sm btn-success" id="newAnalysisBtn">New Analysis</button>
+  <main>
+    <section class="card grid">
+      <div>
+        <label for="start"><strong>Start Location</strong></label>
+        <input id="start" value="Pittsburgh, PA 15222" />
+        <div class="small" style="margin-top:6px">
+          This is the fixed origin used for route optimization.
+          <br>
+          Change it as necessary.
+        </div>
+      </div>
+
+      <div>
+        <label for="fileInput"><strong>Load Stops File</strong></label>
+        <input id="fileInput" type="file">
+        <div class="small" style="margin-top:6px">
+          Select a local CSV or TXT file. If no file is selected, Optimize Route will use the built-in sample stops.
+          <br><br>
+        </div>
+
+        <div class="button-row">
+          <button id="loadBtn">Load Stops</button>
+          <button class="secondary" id="optBtn">Optimize Route</button>
+        </div>
+        <button class="secondary" id="routeMapBtn">Show Complete Route</button>
+      </div>
+
+      <div>
+        <strong>Route Order</strong>
+        <div id="routeList"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div id="map">
+        <div id="mapPlaceholder" style="height:100%;display:flex;align-items:center;justify-content:center;color:#6b7280;">
+          Route preview area
+        </div>
+      </div>
+      <div class="meta" style="margin-top:8px">
+        Click a stop to display its Google Maps view inside the preview area.
+      </div>
+    </section>
+  </main>
+
+  <div id="popup">
+    <div class="inner">
+      <div id="popupTop">
+        <div id="popupTitle"></div>
+        <button id="closePopup" style="width:auto;margin-top:0">Close</button>
+      </div>
+      <iframe id="popupFrame"></iframe>
     </div>
   </div>
 
-  <div class="chat-body" id="chatWindow"></div>
-
-  <div class="chat-buttons">
-    <button id="densityBtn" class="btn btn-outline-primary btn-sm">Density Analysis</button>
-    <button id="aerationBtn" class="btn btn-outline-info btn-sm">Aeration Analysis</button>
+  <div id="routePopup">
+    <div class="inner">
+      <div id="routePopupTop">
+        <div id="routePopupTitle">Complete Route</div>
+        <button id="closeRoutePopup" style="width:auto;margin-top:0">Close</button>
+      </div>
+      <div id="routeMapContainer">
+        <div id="routeOverlay">
+          <div id="routeOverlayTitle">Complete Route</div>
+          <button id="routeOverlayClose">×</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <form class="chat-input d-flex gap-2" id="chatForm">
-    <input type="text" class="form-control" id="userInput" placeholder="Type your message..." required>
-    <button type="submit" class="btn btn-primary">Send</button>
-  </form>
-</div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
 
-<!-- JavaScript -->
-<script>
-  const TOGETHER_API_KEY = "tgp_v1_xmNEMdb6ZIZ41g9mzpHiFSm2mw1sUNYXOc-PrjNhaNQ";
+  <script>
+    const exampleStops = [
+      { address: '1 Bigelow Sq', zip: '15219' },
+      { address: '2200 E Carson St', zip: '15203' },
+      { address: '700 River Ave', zip: '15212' },
+      { address: '1000 Ross Park Mall Dr', zip: '15237' },
+      { address: '200 Cranberry Woods Dr', zip: '16066' }
+    ];
 
+    let stops = [...exampleStops];
+    let loadedFileText = '';
+    const geocodeCache = new Map();
+    let routeMap = null;
 
-const MODEL = "meta-llama/Llama-3-8b-chat-hf"; // Test this instead
+    function renderRoute(list) {
+      const el = document.getElementById('routeList');
+      el.innerHTML = '';
 
-
-  // 🛠️ EDITABLE PROMPTS
-  const GENERAL_PROMPT = "You are a concrete quality expert providing QA analysis for construction job sites. Help analyze and interpret data provided by the user.";
-  const DENSITY_PROMPT = "You're given density readings (comma-separated) of concrete from a construction site. Assess quality, consistency, and suggest any needed remediation.";
-  const AERATION_PROMPT = "You're provided with aeration levels (comma-separated) in fresh concrete. Analyze air content, assess suitability for structural integrity, and offer feedback.";
-
-  let currentClientId = null;
-  let chatHistory = [];
-
-  const $chat = document.getElementById('chatWindow');
-  const $form = document.getElementById('chatForm');
-  const $input = document.getElementById('userInput');
-  const $prior = document.getElementById('priorAnalysis');
-
-  function updateUI() {
-    $chat.innerHTML = '';
-    for (const msg of chatHistory) {
-      const div = document.createElement('div');
-      div.className = 'chat-message ' + (msg.role === 'user' ? 'user' : 'ai');
-      div.innerHTML = `<div class="message">${msg.content}</div>`;
-      $chat.appendChild(div);
-    }
-    $chat.scrollTop = $chat.scrollHeight;
-  }
-
-  function saveChat() {
-    if (!currentClientId) return;
-    localStorage.setItem("chat_" + currentClientId, JSON.stringify(chatHistory));
-    let ids = JSON.parse(localStorage.getItem("client_ids") || "[]");
-    if (!ids.includes(currentClientId)) {
-      ids.push(currentClientId);
-      localStorage.setItem("client_ids", JSON.stringify(ids));
-    }
-    updateClientList();
-  }
-
-  function loadChat(clientId) {
-    currentClientId = clientId;
-    const saved = localStorage.getItem("chat_" + clientId);
-    chatHistory = saved ? JSON.parse(saved) : [];
-    updateUI();
-    updateClientList();
-  }
-
-  function updateClientList() {
-    let ids = JSON.parse(localStorage.getItem("client_ids") || "[]");
-    $prior.innerHTML = '';
-    for (const id of ids) {
-      const opt = document.createElement('option');
-      opt.value = id;
-      opt.textContent = id;
-      if (id === currentClientId) opt.selected = true;
-      $prior.appendChild(opt);
-    }
-  }
-
-  async function sendMessage(userMsg) {
-    chatHistory.push({ role: 'user', content: userMsg });
-    updateUI();
-
-    chatHistory.push({ role: 'ai', content: 'Analyzing... ⏳' });
-    updateUI();
-
-    const msgs = [{ role: 'system', content: GENERAL_PROMPT }];
-    const recent = chatHistory.slice(-8);  // context window
-    for (const msg of recent) {
-      if (msg.role && msg.content) {
-        msgs.push({ role: msg.role, content: msg.content });
+      if (!list.length) {
+        el.innerHTML = '<div class="meta">No stops loaded yet.</div>';
+        return;
       }
+
+      list.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'stop';
+        div.innerHTML = `<strong>${i + 1}. ${s.address}</strong><div class="meta">ZIP ${s.zip}</div>`;
+        div.onclick = () => showMapInPreview(s);
+        el.appendChild(div);
+      });
     }
 
-    try {
-      const response = await fetch('https://api.together.xyz/v1/chat/completions', {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${TOGETHER_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: msgs,
-          temperature: 0.3,
-          max_tokens: 500
-        })
+    async function geocode(q) {
+      if (geocodeCache.has(q)) return geocodeCache.get(q);
+
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q);
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+
+      const out = data[0]
+        ? { lat: +data[0].lat, lon: +data[0].lon, display_name: data[0].display_name }
+        : null;
+
+      geocodeCache.set(q, out);
+      return out;
+    }
+
+    function parseStops(text) {
+      const lines = text.trim().split(/\r?\n/).filter(Boolean);
+      if (!lines.length) return [];
+
+      const delim = lines[0].includes(',') ? ',' : /\t/;
+      const parsed = [];
+
+      for (const line of lines.slice(1)) {
+        const parts = line.split(delim).map(s => s.trim()).filter(Boolean);
+        if (!parts.length) continue;
+
+        const address = parts[0];
+        const zip = parts[1] || '';
+        if (address) parsed.push({ address, zip });
+        if (parsed.length >= 25) break;
+      }
+
+      return parsed;
+    }
+
+    async function optimizeFromOrigin(origin, list) {
+      const pts = [];
+      const originGeo = await geocode(origin);
+      if (!originGeo) throw new Error('Could not geocode start location');
+
+      for (const s of list) {
+        const g = await geocode(`${s.address}, ${s.zip}, PA, USA`);
+        if (g) pts.push({ ...s, ...g });
+      }
+
+      let current = originGeo;
+      const remaining = pts.slice();
+      const ordered = [];
+
+      while (remaining.length) {
+        let bestI = 0;
+        let bestD = Infinity;
+
+        remaining.forEach((p, i) => {
+          const d = Math.hypot(current.lat - p.lat, current.lon - p.lon);
+          if (d < bestD) {
+            bestD = d;
+            bestI = i;
+          }
+        });
+
+        const next = remaining.splice(bestI, 1)[0];
+        ordered.push(next);
+        current = next;
+      }
+
+      return ordered;
+    }
+
+    async function loadSelectedFile() {
+      const input = document.getElementById('fileInput');
+      const file = input.files && input.files[0];
+      if (!file) return [];
+
+      const text = await file.text();
+      loadedFileText = text;
+      const parsed = parseStops(text);
+
+      if (!parsed.length) alert('The file did not contain any usable stops.');
+
+      return parsed;
+    }
+
+    function showMapInPreview(s) {
+      const q = encodeURIComponent(`${s.address}, ${s.zip}, PA`);
+      document.getElementById('map').innerHTML = `
+        <iframe
+          id="previewFrame"
+          src="https://www.google.com/maps?q=${q}&output=embed"
+          width="100%"
+          height="100%"
+          style="border:0;display:block;"
+          loading="lazy"
+          allowfullscreen
+        ></iframe>
+      `;
+    }
+
+    function resetMapPreview() {
+      document.getElementById('map').innerHTML = `
+        <div id="mapPlaceholder" style="height:100%;display:flex;align-items:center;justify-content:center;color:#6b7280;">
+          Route preview area
+        </div>
+      `;
+    }
+
+    async function getRouteGeometry(points) {
+      if (points.length < 2) return [];
+
+      const coords = points.map(p => `${p.lon},${p.lat}`).join(';');
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.routes || !data.routes.length) return [];
+      return data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+    }
+
+    async function openRoutePopup(title, originGeo, orderedStops) {
+      document.getElementById('routePopupTitle').textContent = title;
+      document.getElementById('routeOverlayTitle').textContent = title;
+
+      const container = document.getElementById('routeMapContainer');
+      container.innerHTML = `
+        <div id="routeOverlay">
+          <div id="routeOverlayTitle">${title}</div>
+          <button id="routeOverlayClose">×</button>
+        </div>
+      `;
+
+      if (routeMap) {
+        routeMap.remove();
+        routeMap = null;
+      }
+
+      routeMap = L.map('routeMapContainer', {
+        scrollWheelZoom: true
       });
 
-      const data = await response.json();
-      chatHistory.pop(); // remove placeholder
-      if (data.choices && data.choices[0]) {
-        chatHistory.push({ role: 'ai', content: data.choices[0].message.content });
-      } else {
-        chatHistory.push({ role: 'ai', content: "⚠️ Failed to generate response." });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(routeMap);
+
+      const routePoints = [];
+      const markerPoints = [];
+
+      if (originGeo) {
+        routePoints.push({ lat: originGeo.lat, lon: originGeo.lon });
+        markerPoints.push([originGeo.lat, originGeo.lon, 'Start / End: ' + document.getElementById('start').value]);
       }
-    } catch (err) {
-      chatHistory.pop();
-      chatHistory.push({ role: 'ai', content: "❌ API error: " + err.message });
-    }
 
-    updateUI();
-    saveChat();
-  }
-
-  function askAnalysis(prompt, label) {
-    const data = promptUser("Enter comma-separated values for " + label + ":");
-    if (data) {
-      chatHistory.push({ role: 'user', content: `${label} data: ${data}` });
-      updateUI();
-      specializedAnalysis(prompt + `\n\nInput: ${data}`);
-    }
-  }
-
-  async function specializedAnalysis(fullPrompt) {
-    chatHistory.push({ role: 'ai', content: 'Analyzing... ⏳' });
-    updateUI();
-
-    try {
-      const msgs = [{ role: 'system', content: fullPrompt }];
-      const response = await fetch('https://api.together.xyz/v1/chat/completions', {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${TOGETHER_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: msgs,
-          temperature: 0.3,
-          max_tokens: 500
-        })
+      orderedStops.forEach((s, idx) => {
+        routePoints.push({ lat: s.lat, lon: s.lon });
+        markerPoints.push([s.lat, s.lon, `${idx + 1}. ${s.address}, ${s.zip}`]);
       });
 
-      const data = await response.json();
-      chatHistory.pop();
-      if (data.choices && data.choices[0]) {
-        chatHistory.push({ role: 'ai', content: data.choices[0].message.content });
-      } else {
-        chatHistory.push({ role: 'ai', content: "No response from AI." });
-      }
-    } catch (err) {
-      chatHistory.pop();
-      chatHistory.push({ role: 'ai', content: "❌ Error: " + err.message });
+      markerPoints.forEach(([lat, lon, label]) => {
+        L.marker([lat, lon]).addTo(routeMap).bindPopup(label);
+      });
+
+      const geometry = await getRouteGeometry(routePoints);
+      const latLngs = geometry.length ? geometry : routePoints.map(p => [p.lat, p.lon]);
+
+      const routeLine = L.polyline(latLngs, { color: '#2563eb', weight: 5, opacity: 0.9 }).addTo(routeMap);
+
+      document.getElementById('routePopup').style.display = 'flex';
+
+      setTimeout(() => {
+        routeMap.invalidateSize();
+        routeMap.fitBounds(routeLine.getBounds(), {
+          padding: [60, 60],
+          maxZoom: 12
+        });
+      }, 200);
+
+      const closeFn = () => {
+        document.getElementById('routePopup').style.display = 'none';
+        if (routeMap) {
+          routeMap.remove();
+          routeMap = null;
+        }
+        document.getElementById('routeMapContainer').innerHTML = '';
+      };
+
+      document.getElementById('routeOverlayClose').onclick = closeFn;
     }
 
-    updateUI();
-    saveChat();
-  }
+    document.getElementById('closePopup').onclick = function () {
+      document.getElementById('popup').style.display = 'none';
+      document.getElementById('popupFrame').src = 'about:blank';
+    };
 
-  function promptUser(text) {
-    return prompt(text);
-  }
+    document.getElementById('popup').onclick = function (e) {
+      if (e.target.id === 'popup') {
+        document.getElementById('popup').style.display = 'none';
+        document.getElementById('popupFrame').src = 'about:blank';
+      }
+    };
 
-  // --- Event Handlers ---
-  $form.addEventListener('submit', e => {
-    e.preventDefault();
-    const text = $input.value.trim();
-    if (!text) return;
-    sendMessage(text);
-    $input.value = '';
-  });
+    document.getElementById('closeRoutePopup').onclick = function () {
+      document.getElementById('routePopup').style.display = 'none';
+      if (routeMap) {
+        routeMap.remove();
+        routeMap = null;
+      }
+      document.getElementById('routeMapContainer').innerHTML = '';
+    };
 
-  document.getElementById('newAnalysisBtn').addEventListener('click', () => {
-    const newID = prompt("Enter new Client ID:");
-    if (newID) loadChat(newID);
-  });
+    document.getElementById('routePopup').onclick = function (e) {
+      if (e.target.id === 'routePopup') {
+        document.getElementById('routePopup').style.display = 'none';
+        if (routeMap) {
+          routeMap.remove();
+          routeMap = null;
+        }
+        document.getElementById('routeMapContainer').innerHTML = '';
+      }
+    };
 
-  $prior.addEventListener('change', () => loadChat($prior.value));
+    document.getElementById('loadBtn').onclick = async function () {
+      const parsed = await loadSelectedFile();
+      if (parsed.length) {
+        stops = parsed;
+        renderRoute(stops);
+        resetMapPreview();
+      }
+    };
 
-  document.getElementById('densityBtn').addEventListener('click', () => {
-    askAnalysis(DENSITY_PROMPT, "Density");
-  });
+    document.getElementById('optBtn').onclick = async function () {
+      const hasLoadedFile = loadedFileText && loadedFileText.trim().length > 0;
+      const parsed = hasLoadedFile ? parseStops(loadedFileText) : exampleStops;
 
-  document.getElementById('aerationBtn').addEventListener('click', () => {
-    askAnalysis(AERATION_PROMPT, "Aeration");
-  });
+      if (!parsed.length) {
+        alert('No stops available to optimize.');
+        return;
+      }
 
-  // --- Initialize ---
-  (() => {
-    const ids = JSON.parse(localStorage.getItem("client_ids") || "[]");
-    if (ids.length > 0) loadChat(ids[0]);
-    updateClientList();
-  })();
-</script>
+      stops = await optimizeFromOrigin(document.getElementById('start').value, parsed);
+      renderRoute(stops);
 
+      if (stops.length) {
+        showMapInPreview(stops[0]);
+      }
+    };
+
+    document.getElementById('routeMapBtn').onclick = async function () {
+      const hasLoadedFile = loadedFileText && loadedFileText.trim().length > 0;
+      const parsed = hasLoadedFile ? parseStops(loadedFileText) : exampleStops;
+
+      if (!parsed.length) {
+        alert('No stops available to optimize.');
+        return;
+      }
+
+      const startText = document.getElementById('start').value;
+      const originGeo = await geocode(startText);
+
+      if (!originGeo) {
+        alert('Could not geocode the start location.');
+        return;
+      }
+
+      stops = await optimizeFromOrigin(startText, parsed);
+      renderRoute(stops);
+
+      openRoutePopup('Complete Route Overview', originGeo, stops);
+    };
+
+    document.getElementById('fileInput').addEventListener('change', async function () {
+      const parsed = await loadSelectedFile();
+      if (parsed.length) {
+        stops = parsed;
+        renderRoute(stops);
+        resetMapPreview();
+      }
+    });
+
+    renderRoute(stops);
+  </script>
 </body>
 </html>
