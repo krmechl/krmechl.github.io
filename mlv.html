@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LLM7 proxy test</title>
+<title>DistilGPT2 Prototype</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -40,7 +40,10 @@
     font-size: 16px;
     cursor: pointer;
   }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
   pre {
     white-space: pre-wrap;
     word-break: break-word;
@@ -54,54 +57,53 @@
 </style>
 </head>
 <body>
-  <h1>LLM7 proxy test</h1>
+  <h1>DistilGPT2 Prototype</h1>
   <div class="card">
-    <textarea id="prompt">Why is the sky blue?</textarea>
-    <button id="sendBtn">Send</button>
-    <h3>Response</h3>
-    <pre id="output">Ready.</pre>
+    <textarea id="prompt" placeholder="Write a short prompt...">Once upon a time,</textarea>
+    <button id="sendBtn">Generate</button>
+    <h3>Output</h3>
+    <pre id="output">Loading model...</pre>
   </div>
 
-<script>
-const PROXY_URL = "https://your-worker.your-subdomain.workers.dev";
-const MODEL = "gpt-4o-mini-2024-07-18";
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.min.js";
 
 const promptEl = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const outputEl = document.getElementById("output");
 
+let generator = null;
+
+async function loadModel() {
+  outputEl.textContent = "Loading model...";
+  generator = await pipeline("text-generation", "Xenova/distilgpt2");
+  outputEl.textContent = "Model ready.";
+}
+
 sendBtn.addEventListener("click", async () => {
+  if (!generator) return;
   const prompt = promptEl.value.trim();
   if (!prompt) return;
 
   sendBtn.disabled = true;
-  outputEl.textContent = "Sending...";
-
-  const payload = {
-    model: MODEL,
-    messages: [
-      { role: "user", content: prompt }
-    ],
-    temperature: 0.7
-  };
+  outputEl.textContent = "Generating...";
 
   try {
-    const res = await fetch(PROXY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
+    const result = await generator(prompt, {
+      max_new_tokens: 64,
+      do_sample: true,
+      temperature: 0.8,
+      top_p: 0.95
     });
-
-    const text = await res.text();
-    outputEl.textContent = `HTTP ${res.status} ${res.statusText}\n\n${text}`;
+    outputEl.textContent = result[0].generated_text;
   } catch (err) {
-    outputEl.textContent = "Fetch failed:\n\n" + (err.stack || err.message || String(err));
+    outputEl.textContent = "Error:\n\n" + (err.stack || err.message || String(err));
   } finally {
     sendBtn.disabled = false;
   }
 });
+
+loadModel();
 </script>
 </body>
 </html>
