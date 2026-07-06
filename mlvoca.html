@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>mlvoca curl test</title>
+<title>mlvoca proxy test</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -40,10 +40,7 @@
     font-size: 16px;
     cursor: pointer;
   }
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
   pre {
     white-space: pre-wrap;
     word-break: break-word;
@@ -54,27 +51,19 @@
     overflow: auto;
     min-height: 120px;
   }
-  .hint {
-    font-size: 14px;
-    color: #475569;
-    margin-bottom: 10px;
-  }
 </style>
 </head>
 <body>
-  <h1>mlvoca curl test</h1>
+  <h1>mlvoca proxy test</h1>
   <div class="card">
-    <div class="hint">Type a prompt, click Send, and see whether the raw API response comes back.</div>
-
-    <textarea id="prompt" placeholder="Why is the sky blue?">Why is the sky blue?</textarea>
+    <textarea id="prompt">Why is the sky blue?</textarea>
     <button id="sendBtn">Send</button>
-
     <h3>Response</h3>
     <pre id="output">Ready.</pre>
   </div>
 
 <script>
-const API_URL = "https://mlvoca.com/api/generate";
+const PROXY_URL = "https://corsproxy.io/?https://mlvoca.com/api/generate";
 const MODEL = "tinyllama";
 
 const promptEl = document.getElementById("prompt");
@@ -95,7 +84,7 @@ sendBtn.addEventListener("click", async () => {
   };
 
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(PROXY_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -104,9 +93,7 @@ sendBtn.addEventListener("click", async () => {
     });
 
     const text = await res.text();
-    outputEl.textContent =
-      `HTTP ${res.status} ${res.statusText}\n\n` + text;
-
+    outputEl.textContent = `HTTP ${res.status} ${res.statusText}\n\n${text}`;
   } catch (err) {
     outputEl.textContent = "Fetch failed:\n\n" + (err.stack || err.message || String(err));
   } finally {
