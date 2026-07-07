@@ -67,7 +67,9 @@
   border-radius: 0.25rem;
 }
 #modelStatus {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.95rem;
   color: #111827;
   margin-bottom: 8px;
@@ -113,7 +115,6 @@
   width: 16px;
   height: 16px;
   vertical-align: middle;
-  margin-left: 6px;
 }
 </style>
 </head>
@@ -135,7 +136,11 @@ Ads
 </div>
 </div>
 
-<div id="modelStatus">Model: DistilGPT2 --> <span id="modelStateText" style="margin-left:8px;">Loading Model</span><img id="modelLoadSpinner" src="spinner.gif" alt="Loading"></div>
+<div id="modelStatus">
+  <span>Model: DistilGPT2 --&gt;</span>
+  <span id="modelStateText">Loading Model</span>
+  <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
+</div>
 <div id="errorPanel"></div>
 <div id="debugPanel"></div>
 
@@ -291,12 +296,14 @@ async function fetchRelevantImage(query) {
   const errorPanel = document.getElementById('errorPanel');
   const debugPanel = document.getElementById('debugPanel');
   const modelStateText = document.getElementById('modelStateText');
+  const modelLoadSpinner = document.getElementById('modelLoadSpinner');
 
   let adsEnabled = true;
   let conversations = {};
   let activeConversationId = null;
   let adRenderToken = 0;
   let generatorPromise = null;
+  let modelReady = false;
 
   const STORAGE_KEYS = {
     conversations: 'chatApp_conversations',
@@ -323,6 +330,23 @@ async function fetchRelevantImage(query) {
   function clearDebug() {
     debugPanel.textContent = '';
     debugPanel.style.display = 'none';
+  }
+
+  function setModelLoading() {
+    modelStateText.textContent = 'Loading Model';
+    if (modelLoadSpinner) modelLoadSpinner.style.display = 'inline-block';
+  }
+
+  function setModelReady() {
+    modelStateText.textContent = 'Model Ready';
+    if (modelLoadSpinner) modelLoadSpinner.style.display = 'none';
+    modelReady = true;
+  }
+
+  function setModelError() {
+    modelStateText.textContent = 'Model Error';
+    if (modelLoadSpinner) modelLoadSpinner.style.display = 'none';
+    modelReady = false;
   }
 
   function updateAdToggleBtn() {
@@ -587,17 +611,25 @@ async function fetchRelevantImage(query) {
 
   async function getGenerator() {
     if (!generatorPromise) {
-      modelStateText.textContent = 'Loading Model';
-      const spinner = document.getElementById('modelLoadSpinner');
-      if (spinner) spinner.style.display = 'inline-block';
-
+      setModelLoading();
       generatorPromise = pipeline("text-generation", MODEL_ID).then(pipe => {
-        modelStateText.textContent = 'Model Ready';
-        if (spinner) spinner.style.display = 'none';
+        setModelReady();
         return pipe;
+      }).catch(err => {
+        setModelError();
+        throw err;
       });
     }
     return generatorPromise;
+  }
+
+  async function initModel() {
+    try {
+      await getGenerator();
+    } catch (err) {
+      showError('Model failed to load: ' + (err?.message || String(err)));
+      showDebug(err?.stack || err?.message || String(err));
+    }
   }
 
   async function fetchDistilGPT2(messages) {
@@ -673,12 +705,11 @@ async function fetchRelevantImage(query) {
     }
   });
 
-  function init() {
+  async function init() {
     loadState();
     renderConversationList();
-    if (!activeConversationId) {
-      createNewConversation();
-    }
+    if (!activeConversationId) createNewConversation();
+    await initModel();
   }
 
   init();
