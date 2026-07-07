@@ -129,7 +129,7 @@ Ads
 </div>
 </div>
 
-<div id="modelStatus">Model: DistilGPT2--> <span id="modelStateText" style="margin-left:8px;">Loading Model</span></div>
+<div id="modelStatus">Model: Llama-3.2-1B-Instruct --> <span id="modelStateText" style="margin-left:8px;">Loading Model</span></div>
 <div id="errorPanel"></div>
 <div id="debugPanel"></div>
 
@@ -297,7 +297,7 @@ async function fetchRelevantImage(query) {
     activeConversationId: 'chatApp_activeConversationId'
   };
 
-  const MODEL_ID = "Xenova/distilgpt2";
+ const MODEL_ID = "onnx-community/Llama-3.2-1B-Instruct-ONNX";
 
   function showError(message) {
     errorPanel.textContent = message;
