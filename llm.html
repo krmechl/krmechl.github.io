@@ -109,6 +109,12 @@
   object-fit: cover;
   display: block;
 }
+#modelLoadSpinner {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
 </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col">
@@ -129,7 +135,7 @@ Ads
 </div>
 </div>
 
-<div id="modelStatus">Model: DistilGPT2 --> <span id="modelStateText" style="margin-left:8px;">Loading Model</span></div>
+<div id="modelStatus">Model: DistilGPT2 --> <span id="modelStateText" style="margin-left:8px;">Loading Model</span><img id="modelLoadSpinner" src="spinner.gif" alt="Loading"></div>
 <div id="errorPanel"></div>
 <div id="debugPanel"></div>
 
@@ -297,7 +303,7 @@ async function fetchRelevantImage(query) {
     activeConversationId: 'chatApp_activeConversationId'
   };
 
-const MODEL_ID = "Xenova/distilgpt2";
+  const MODEL_ID = "Xenova/distilgpt2";
 
   function showError(message) {
     errorPanel.textContent = message;
@@ -582,8 +588,12 @@ const MODEL_ID = "Xenova/distilgpt2";
   async function getGenerator() {
     if (!generatorPromise) {
       modelStateText.textContent = 'Loading Model';
+      const spinner = document.getElementById('modelLoadSpinner');
+      if (spinner) spinner.style.display = 'inline-block';
+
       generatorPromise = pipeline("text-generation", MODEL_ID).then(pipe => {
         modelStateText.textContent = 'Model Ready';
+        if (spinner) spinner.style.display = 'none';
         return pipe;
       });
     }
