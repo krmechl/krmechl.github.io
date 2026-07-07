@@ -67,13 +67,10 @@
   border-radius: 0.25rem;
 }
 #modelStatus {
-  display: none;
-  font-size: 0.9rem;
-  color: #374151;
-  margin-bottom: 8px;
-}
-#modelStatus strong {
+  display: block;
+  font-size: 0.95rem;
   color: #111827;
+  margin-bottom: 8px;
 }
 #errorPanel {
   display: none;
@@ -81,17 +78,6 @@
   background: #fef2f2;
   color: #991b1b;
   border: 1px solid #fecaca;
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  font-size: 0.92rem;
-}
-#configPanel {
-  display: none;
-  white-space: pre-wrap;
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
   padding: 10px 12px;
   border-radius: 8px;
   margin-bottom: 10px;
@@ -109,6 +95,19 @@
   font-size: 0.9rem;
   max-height: 220px;
   overflow: auto;
+}
+.related-photo-wrap {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.related-photo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 </style>
 </head>
@@ -129,13 +128,13 @@ Ads
 <button id="newConversationBtn" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition" title="Start a new conversation">New conversation</button>
 </div>
 </div>
-<div id="modelStatus"></div>
-<div id="configPanel">
-  <strong>Config needed:</strong> replace GOOGLE_API_KEY_PLACEHOLDER with your Google AI Studio API key.
-</div>
+
+<div id="modelStatus">Model: DistilGPT2--> <span id="modelStateText" style="margin-left:8px;">Loading Model</span></div>
 <div id="errorPanel"></div>
 <div id="debugPanel"></div>
+
 <div id="chatHistory" class="flex-grow bg-white rounded shadow p-4 overflow-y-auto mb-4 min-h-[400px] max-h-[80vh]"></div>
+
 <form id="chatForm" class="flex gap-2">
 <textarea
 id="chatInput"
@@ -155,16 +154,21 @@ aria-label="Send message"
 ➣
 </button>
 </form>
+
 <hr style="height:2px">
+
 <form id="googleSearchForm" style="display:flex; gap:8px;" onsubmit="return false;">
 <input type="text" id="googleSearchInput" placeholder="Realtime internet query" style="flex:1; padding:8px; font-size:16px;">
 <button type="button" id="googleSearchBtn" style="padding:8px 16px; font-size:16px;" class="bg-black text-white px-4 py-2 rounded hover:bg-gray-900 transition">➣</button>
 </form>
+
 <form id="agentPromptForm" style="display:flex; gap:8px; margin-top:4px; margin-bottom:2px" onsubmit="return false;">
 <input type="text" id="agentPromptInput" placeholder="Set your Agent Alert" style="flex:1; padding:8px; font-size:16px;">
 <button type="button" id="agentPromptBtn" style="padding:8px 16px; font-size:16px;" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">➣</button>
 </form>
+
 <hr style="height:2px">
+
 <div class="relative mt-2" id="followupDropdownContainer">
 <button id="toggleFollowupDropdown" type="button"
 class="bg-black text-white px-3 py-1 rounded hover:bg-gray-900 transition font-medium"
@@ -177,8 +181,12 @@ class="bg-white border border-blue-200 rounded shadow-lg mt-1">
 </div>
 </div>
 </main>
+
 <div id="toast"></div>
-<script>
+
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.min.js";
+
 const agentResponses = [
   "New research paper on AI ethics.",
   "Update: Stock prices for AI companies have changed.",
@@ -188,11 +196,13 @@ const agentResponses = [
   "Recent breakthrough in AI image generation.",
   "AI-powered app featured in major tech news."
 ];
+
 let currentAgentPrompt = "";
 const agentMessageUrls = {
   "Agent found a new research paper on AI ethics.": "https://arxiv.org/abs/1234.5678",
   "Agent alert: New open-source LLM released.": "https://huggingface.co/models"
 };
+
 function showAgentToast(message) {
   const url = agentMessageUrls[message] || "https://andisearch.com";
   const toast = document.getElementById('toast');
@@ -207,6 +217,7 @@ function showAgentToast(message) {
     toast.style.display = 'none';
   }, 8000);
 }
+
 document.getElementById('agentPromptBtn').addEventListener('click', function() {
   const prompt = document.getElementById('agentPromptInput').value.trim();
   if (prompt) {
@@ -214,17 +225,20 @@ document.getElementById('agentPromptBtn').addEventListener('click', function() {
     showAgentToast("");
   }
 });
+
 setInterval(function() {
   if (!currentAgentPrompt) return;
   const msg = agentResponses[Math.floor(Math.random() * agentResponses.length)];
   showAgentToast(msg);
 }, 20000);
+
 function extractRelevantKeywords(text) {
   const doc = nlp(text);
   let nouns = doc.nouns().toSingular().out('array').map(w => w.toLowerCase());
   nouns = Array.from(new Set(nouns)).filter(word => word.length > 2);
   return nouns;
 }
+
 async function fetchGumGumAd(query) {
   const keywords = extractRelevantKeywords(query);
   const adKeywords = keywords.slice(0, 3).join(' ');
@@ -237,6 +251,7 @@ async function fetchGumGumAd(query) {
     url: "https://www.amazon.com/s?k=" + encodeURIComponent(adKeywords)
   };
 }
+
 async function fetchRelevantImage(query) {
   const API_KEY = 'WbmeqR1iHjvnFiSD91AP5vN6vE3NDQLz4UnlxGGdKzt4MCRsqYJiKRHT';
   const keywords = extractRelevantKeywords(query).slice(0, 3).join(' ');
@@ -259,6 +274,7 @@ async function fetchRelevantImage(query) {
   } catch {}
   return null;
 }
+
 (() => {
   const chatHistory = document.getElementById('chatHistory');
   const chatForm = document.getElementById('chatForm');
@@ -268,36 +284,41 @@ async function fetchRelevantImage(query) {
   const adToggleBtn = document.getElementById('adToggleBtn');
   const errorPanel = document.getElementById('errorPanel');
   const debugPanel = document.getElementById('debugPanel');
+  const modelStateText = document.getElementById('modelStateText');
+
   let adsEnabled = true;
   let conversations = {};
   let activeConversationId = null;
   let adRenderToken = 0;
+  let generatorPromise = null;
+
   const STORAGE_KEYS = {
     conversations: 'chatApp_conversations',
     activeConversationId: 'chatApp_activeConversationId'
   };
-  const GOOGLE_API_KEY = "AQ.Ab8RN6LJp0aDWrk-fL5ZwAAsNvTLh-sre4O6v_G7oqs1QxiC8A";
-  const GEMINI_MODEL = "gemini-3.5-flash";
-  const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-  const GEMINI_CHAT_URL = `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent`;
-  document.getElementById('modelStatus').textContent = `Model in use: ${GEMINI_MODEL}`;
-  if (GOOGLE_API_KEY === "GOOGLE_API_KEY_PLACEHOLDER") document.getElementById('configPanel').style.display = 'block';
+
+  const MODEL_ID = "Xenova/distilgpt2";
+
   function showError(message) {
     errorPanel.textContent = message;
     errorPanel.style.display = 'block';
   }
+
   function clearError() {
     errorPanel.textContent = '';
     errorPanel.style.display = 'none';
   }
+
   function showDebug(message) {
     debugPanel.textContent = message;
     debugPanel.style.display = 'block';
   }
+
   function clearDebug() {
     debugPanel.textContent = '';
     debugPanel.style.display = 'none';
   }
+
   function updateAdToggleBtn() {
     if (adsEnabled) {
       adToggleBtn.classList.remove('bg-red-100', 'text-red-900', 'border-red-200');
@@ -307,12 +328,15 @@ async function fetchRelevantImage(query) {
       adToggleBtn.classList.add('bg-red-100', 'text-red-900', 'border-red-200');
     }
   }
+
   adToggleBtn.addEventListener('click', function() {
     adsEnabled = !adsEnabled;
     updateAdToggleBtn();
     renderChatHistory();
   });
+
   updateAdToggleBtn();
+
   function showToast(message) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -322,14 +346,17 @@ async function fetchRelevantImage(query) {
       toast.style.display = 'none';
     }, 1400);
   }
+
   function showSpinner() {
     const logo = document.getElementById('aiLogo');
     if (logo) logo.src = 'spinner.gif';
   }
+
   function showLogo() {
     const logo = document.getElementById('aiLogo');
     if (logo) logo.src = 'ai.gif';
   }
+
   function loadState() {
     const storedConversations = localStorage.getItem(STORAGE_KEYS.conversations);
     if (storedConversations) {
@@ -340,15 +367,18 @@ async function fetchRelevantImage(query) {
       activeConversationId = storedActiveConv;
     }
   }
+
   function saveState() {
     localStorage.setItem(STORAGE_KEYS.conversations, JSON.stringify(conversations));
     if (activeConversationId) {
       localStorage.setItem(STORAGE_KEYS.activeConversationId, activeConversationId);
     }
   }
+
   function generateId() {
     return 'conv_' + Math.random().toString(36).substring(2, 10);
   }
+
   function renderConversationList() {
     const convs = Object.values(conversations);
     conversationSelect.innerHTML = '';
@@ -363,7 +393,8 @@ async function fetchRelevantImage(query) {
       renderChatHistory();
       return;
     }
-    convs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    convs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     convs.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
@@ -374,20 +405,28 @@ async function fetchRelevantImage(query) {
       opt.textContent = label;
       conversationSelect.appendChild(opt);
     });
+
     if (!convs.find(c => c.id === activeConversationId)) {
       activeConversationId = convs[0].id;
       saveState();
     }
+
     conversationSelect.value = activeConversationId;
     renderChatHistory();
   }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
+
   function renderAdBubble(ad, image) {
-    const imageHtml = image?.src ? `<img src="${image.src}" alt="${escapeHtml(image.alt || 'Related image')}" style="width:100px;height:88px;object-fit:cover;border-radius:10px;flex-shrink:10;" />` : "";
+    const imageHtml = image?.src ? `
+      <div class="related-photo-wrap">
+        <img src="${image.src}" alt="${escapeHtml(image.alt || 'Related image')}" />
+      </div>
+    ` : "";
     const photographerHtml = image?.photographer
       ? `<div style="font-size:0.8rem;color:#047857;margin-top:4px;">Photo: ${escapeHtml(image.photographer)}</div>`
       : "";
@@ -409,18 +448,22 @@ async function fetchRelevantImage(query) {
       </div>
     `;
   }
+
   function renderChatHistory() {
     chatHistory.innerHTML = '';
     if (!activeConversationId || !conversations[activeConversationId]) {
       chatHistory.innerHTML = '<p class="text-gray-500 italic">No conversation selected.</p>';
       return;
     }
+
     const msgs = conversations[activeConversationId].messages;
     msgs.forEach((msg, idx) => {
       if (msg.role === 'system') return;
+
       const div = document.createElement('div');
       div.className = msg.role === 'user' ? 'text-right mb-3' : 'text-left mb-3';
       const bubble = document.createElement('div');
+
       if (msg.role === 'search') {
         bubble.className = 'inline-block bg-blue-50 text-blue-900 px-2 py-2 rounded-lg max-w-[90%] mb-2';
         bubble.innerHTML = `
@@ -438,9 +481,11 @@ async function fetchRelevantImage(query) {
         chatHistory.appendChild(div);
         return;
       }
+
       bubble.className = msg.role === 'user'
         ? 'inline-block bg-black text-white px-4 py-2 rounded-lg max-w-[80%] whitespace-pre-wrap'
         : 'inline-block bg-gray-200 text-gray-900 px-4 py-2 rounded-lg max-w-[80%] whitespace-pre-wrap';
+
       if (msg.role === 'assistant') {
         bubble.innerHTML = `
           <img src="ai.gif" alt="Bot" class="inline h-7 w-7 mr-2 align-middle" />
@@ -458,7 +503,9 @@ async function fetchRelevantImage(query) {
         chatHistory.appendChild(div);
       }
     });
+
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
     document.querySelectorAll('.copy-bubble-btn').forEach(btn => {
       btn.onclick = function() {
         const idx = parseInt(this.getAttribute('data-idx'));
@@ -469,18 +516,22 @@ async function fetchRelevantImage(query) {
         }
       };
     });
+
     if (adsEnabled) scheduleAdRender();
   }
+
   function scheduleAdRender() {
     const thisToken = ++adRenderToken;
     const lastUser = activeConversationId && conversations[activeConversationId]
       ? [...conversations[activeConversationId].messages].reverse().find(m => m.role === 'user')
       : null;
     if (!lastUser) return;
+
     const adSlot = document.createElement('div');
     adSlot.innerHTML = '<div class="ad-bubble">Loading sponsored content...</div>';
     chatHistory.appendChild(adSlot);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
     Promise.allSettled([
       fetchRelevantImage(lastUser.content),
       fetchGumGumAd(lastUser.content)
@@ -496,6 +547,7 @@ async function fetchRelevantImage(query) {
       chatHistory.scrollTop = chatHistory.scrollHeight;
     });
   }
+
   function createNewConversation() {
     const id = generateId();
     conversations[id] = {
@@ -508,12 +560,14 @@ async function fetchRelevantImage(query) {
     renderConversationList();
     renderChatHistory();
   }
+
   document.getElementById('copyInputBtn').addEventListener('click', function() {
     const input = document.getElementById('chatInput');
     navigator.clipboard.writeText(input.value);
     input.value = '';
     showToast("Copied!");
   });
+
   document.getElementById('googleSearchBtn').addEventListener('click', function() {
     const input = document.getElementById('googleSearchInput');
     const query = input.value.trim();
@@ -524,50 +578,40 @@ async function fetchRelevantImage(query) {
       input.value = '';
     }
   });
-  async function fetchGeminiLLM(messages) {
-    const contents = messages
-      .filter(m => m.role === 'user' || m.role === 'assistant')
-      .map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      }));
-    const payload = {
-      contents,
-      generationConfig: {
-        temperature: 0.6,
-        maxOutputTokens: 768
-      }
-    };
-    showDebug('Request payload:\n' + JSON.stringify(payload, null, 2));
-    const response = await fetch(GEMINI_CHAT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GOOGLE_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-    const rawText = await response.text();
-    showDebug(
-      `HTTP ${response.status} ${response.statusText}\n\nRaw response:\n${rawText}`
-    );
-    let parsed = null;
-    try {
-      parsed = rawText ? JSON.parse(rawText) : null;
-    } catch {}
-    if (!response.ok) {
-      const msg =
-        parsed?.error?.message ||
-        parsed?.message ||
-        rawText ||
-        `HTTP ${response.status} ${response.statusText}`;
-      throw new Error(
-        `Gemini request failed.\nStatus: ${response.status} ${response.statusText}\nMessage: ${msg}`
-      );
+
+  async function getGenerator() {
+    if (!generatorPromise) {
+      modelStateText.textContent = 'Loading Model';
+      generatorPromise = pipeline("text-generation", MODEL_ID).then(pipe => {
+        modelStateText.textContent = 'Model Ready';
+        return pipe;
+      });
     }
-    return parsed?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim() || '[No response]';
+    return generatorPromise;
   }
+
+  async function fetchDistilGPT2(messages) {
+    const userMessages = messages.filter(m => m.role === 'user');
+    const prompt =
+      userMessages.map(m => `User: ${m.content}`).join('\n') +
+      '\nAssistant:';
+
+    showDebug('Prompt:\n' + prompt);
+
+    const generator = await getGenerator();
+    const result = await generator(prompt, {
+      max_new_tokens: 96,
+      do_sample: true,
+      temperature: 0.8,
+      top_p: 0.95
+    });
+
+    const full = result?.[0]?.generated_text || '';
+    return full.startsWith(prompt) ? full.slice(prompt.length).trim() : full.trim();
+  }
+
   newConversationBtn.addEventListener('click', createNewConversation);
+
   conversationSelect.addEventListener('change', () => {
     const selectedId = conversationSelect.value;
     if (conversations[selectedId]) {
@@ -576,45 +620,49 @@ async function fetchRelevantImage(query) {
       renderChatHistory();
     }
   });
+
   chatForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     const userMessage = chatInput.value.trim();
     if (!userMessage || !activeConversationId) return;
+
     clearError();
     clearDebug();
-    if (GOOGLE_API_KEY === "GOOGLE_API_KEY_PLACEHOLDER") {
-      showError("Config missing: replace GOOGLE_API_KEY_PLACEHOLDER with your Google AI Studio API key.");
-      return;
-    }
+
     const conversation = conversations[activeConversationId];
     conversation.messages.push({ role: 'user', content: userMessage });
     saveState();
     renderChatHistory();
     showSpinner();
-    const geminiMessages = [
+
+    const llmMessages = [
       { role: 'system', content: 'You are a helpful assistant. Be concise and helpful.' },
       ...conversation.messages.filter(m => m.role === 'user' || m.role === 'assistant').slice(-12)
     ];
+
     let aiResponse;
     try {
-      aiResponse = await fetchGeminiLLM(geminiMessages);
+      aiResponse = await fetchDistilGPT2(llmMessages);
     } catch (err) {
       showError(err.message);
       showDebug(err.stack || err.message || String(err));
-      aiResponse = `Sorry, there was an error contacting the hosted model.\n\n${err.message}`;
+      aiResponse = `Sorry, there was an error contacting the local model.\n\n${err.message}`;
     }
+
     conversation.messages.push({ role: 'assistant', content: aiResponse });
     saveState();
     renderChatHistory();
     showLogo();
     chatInput.value = '';
   });
+
   chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       chatForm.requestSubmit();
     }
   });
+
   function init() {
     loadState();
     renderConversationList();
@@ -622,18 +670,22 @@ async function fetchRelevantImage(query) {
       createNewConversation();
     }
   }
+
   init();
 })();
+
 let followupSuggestions = [
   "Can you explain this topic in more detail?",
   "What are the latest developments about this?",
   "What are some common misconceptions?"
 ];
+
 const followupDropdown = document.getElementById('followupDropdown');
 const followupList = document.getElementById('followupList');
 const toggleFollowupDropdown = document.getElementById('toggleFollowupDropdown');
 const chatInput = document.getElementById('chatInput');
 const chatForm = document.getElementById('chatForm');
+
 function renderFollowupSuggestions() {
   followupList.innerHTML = '';
   followupSuggestions.forEach((q, i) => {
@@ -647,6 +699,7 @@ function renderFollowupSuggestions() {
     followupList.appendChild(li);
   });
 }
+
 toggleFollowupDropdown.addEventListener('click', function() {
   if (followupDropdown.style.display === 'none') {
     renderFollowupSuggestions();
@@ -657,6 +710,7 @@ toggleFollowupDropdown.addEventListener('click', function() {
     toggleFollowupDropdown.textContent = "Follow-up Questions ▼";
   }
 });
+
 followupList.addEventListener('click', function(e) {
   if (e.target.classList.contains('followup-suggestion-btn')) {
     const idx = e.target.getAttribute('data-idx');
@@ -670,6 +724,7 @@ followupList.addEventListener('click', function(e) {
   }
 });
 </script>
+
 <div id="toast" style="
 display:none;
 position: fixed;
@@ -684,6 +739,7 @@ font-size: 1em;
 z-index: 10000;
 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 "></div>
+
 <script src="https://studio.pickaxe.co/api/embed/bundle.js" defer></script>
 </body>
 </html>
