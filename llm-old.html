@@ -75,17 +75,6 @@
   border: none;
   box-shadow: none;
 }
-#errorPanel {
-  display: none;
-  white-space: pre-wrap;
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  font-size: 0.92rem;
-}
 #debugPanel {
   display: none;
   white-space: pre-wrap;
@@ -132,7 +121,7 @@ Ads
 </div>
 </div>
 
-<div id="modelStatus">Model: DistilGPT2 <span id="modelStateText" style="margin-left:8px;">Loading Model</span></div>
+<div id="modelStatus">Model: DistilGPT2 --> <span id="modelStateText">Loading Model</span></div>
 <div id="debugPanel"></div>
 <div id="chatHistory" class="flex-grow bg-white rounded shadow p-4 overflow-y-auto mb-4 min-h-[400px] max-h-[80vh]"></div>
 
@@ -157,6 +146,7 @@ aria-label="Send message"
 </form>
 
 <hr style="height:2px">
+
 <form id="googleSearchForm" style="display:flex; gap:8px;" onsubmit="return false;">
 <input type="text" id="googleSearchInput" placeholder="Realtime internet query" style="flex:1; padding:8px; font-size:16px;">
 <button type="button" id="googleSearchBtn" style="padding:8px 16px; font-size:16px;" class="bg-black text-white px-4 py-2 rounded hover:bg-gray-900 transition">➣</button>
@@ -318,6 +308,7 @@ async function fetchRelevantImage(query) {
     updateAdToggleBtn();
     renderChatHistory();
   });
+
   updateAdToggleBtn();
 
   function showToast(message) {
@@ -376,7 +367,7 @@ async function fetchRelevantImage(query) {
       renderChatHistory();
       return;
     }
-    convs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    convs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     convs.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
@@ -431,12 +422,15 @@ async function fetchRelevantImage(query) {
       chatHistory.innerHTML = '<p class="text-gray-500 italic">No conversation selected.</p>';
       return;
     }
+
     const msgs = conversations[activeConversationId].messages;
     msgs.forEach((msg, idx) => {
       if (msg.role === 'system') return;
+
       const div = document.createElement('div');
       div.className = msg.role === 'user' ? 'text-right mb-3' : 'text-left mb-3';
       const bubble = document.createElement('div');
+
       if (msg.role === 'search') {
         bubble.className = 'inline-block bg-blue-50 text-blue-900 px-2 py-2 rounded-lg max-w-[90%] mb-2';
         bubble.innerHTML = `
@@ -454,9 +448,11 @@ async function fetchRelevantImage(query) {
         chatHistory.appendChild(div);
         return;
       }
+
       bubble.className = msg.role === 'user'
         ? 'inline-block bg-black text-white px-4 py-2 rounded-lg max-w-[80%] whitespace-pre-wrap'
         : 'inline-block bg-gray-200 text-gray-900 px-4 py-2 rounded-lg max-w-[80%] whitespace-pre-wrap';
+
       if (msg.role === 'assistant') {
         bubble.innerHTML = `
           <img src="ai.gif" alt="Bot" class="inline h-7 w-7 mr-2 align-middle" />
@@ -474,7 +470,9 @@ async function fetchRelevantImage(query) {
         chatHistory.appendChild(div);
       }
     });
+
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
     document.querySelectorAll('.copy-bubble-btn').forEach(btn => {
       btn.onclick = function() {
         const idx = parseInt(this.getAttribute('data-idx'));
@@ -485,6 +483,7 @@ async function fetchRelevantImage(query) {
         }
       };
     });
+
     if (adsEnabled) scheduleAdRender();
   }
 
@@ -494,10 +493,12 @@ async function fetchRelevantImage(query) {
       ? [...conversations[activeConversationId].messages].reverse().find(m => m.role === 'user')
       : null;
     if (!lastUser) return;
+
     const adSlot = document.createElement('div');
     adSlot.innerHTML = '<div class="ad-bubble">Loading sponsored content...</div>';
     chatHistory.appendChild(adSlot);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
     Promise.allSettled([
       fetchRelevantImage(lastUser.content),
       fetchGumGumAd(lastUser.content)
@@ -557,10 +558,10 @@ async function fetchRelevantImage(query) {
   }
 
   async function fetchDistilGPT2(messages) {
-    const prompt = messages
-      .filter(m => m.role === 'user')
-      .map(m => `User: ${m.content}`)
-      .join('\n') + '\nAssistant:';
+    const prompt =
+      messages.filter(m => m.role === 'user')
+        .map(m => `User: ${m.content}`)
+        .join('\n') + '\nAssistant:';
 
     showDebug('Prompt:\n' + prompt);
 
@@ -629,6 +630,7 @@ async function fetchRelevantImage(query) {
       createNewConversation();
     }
   }
+
   init();
 })();
 
