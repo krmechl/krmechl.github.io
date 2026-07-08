@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transformers.js Model Stub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+  }
+  .bubble {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .chip {
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .chip:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+  }
+</style>
+</head>
+<body class="min-h-screen p-4">
+  <main class="max-w-4xl mx-auto bg-white rounded-xl shadow p-4 md:p-6">
+    <h1 class="text-2xl font-bold mb-4">Transformers.js Model Stub</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block font-semibold mb-1" for="modelInput">Model address</label>
+        <input id="modelInput" class="w-full border rounded px-3 py-2" value="Xenova/flan-t5-small" />
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1" for="taskSelect">Pipeline task</label>
+        <select id="taskSelect" class="w-full border rounded px-3 py-2">
+          <option value="text2text-generation">text2text-generation</option>
+          <option value="text-generation">text-generation</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1">Try a model</label>
+      <div class="flex flex-wrap gap-2">
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/distilgpt2" data-task="text-generation">Xenova/distilgpt2</button>
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/gpt2" data-task="text-generation">Xenova/gpt2</button>
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/t5-small" data-task="text2text-generation">Xenova/t5-small</button>
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/flan-t5-small" data-task="text2text-generation">Xenova/flan-t5-small</button>
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/flan-t5-base" data-task="text2text-generation">Xenova/flan-t5-base</button>
+        <button class="chip px-3 py-2 border rounded text-sm bg-gray-50" data-model="Xenova/LaMini-Flan-T5-783M" data-task="text2text-generation">Xenova/LaMini-Flan-T5-783M</button>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold mb-1" for="queryInput">Query</label>
+      <textarea id="queryInput" rows="4" class="w-full border rounded px-3 py-2 resize-y" placeholder="Ask something..."></textarea>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <button id="sendBtn" class="bg-black text-white px-4 py-2 rounded">Send</button>
+      <div id="statusText" class="text-sm text-gray-700">Idle</div>
+    </div>
+
+    <div class="mb-2 font-semibold">Response</div>
+    <div id="responseBubble" class="bubble bg-blue-50 border border-blue-200 rounded-xl p-4 min-h-24 text-gray-900"></div>
+  </main>
+
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.min.js";
+
+const modelInput = document.getElementById('modelInput');
+const taskSelect = document.getElementById('taskSelect');
+const queryInput = document.getElementById('queryInput');
+const sendBtn = document.getElementById('sendBtn');
+const statusText = document.getElementById('statusText');
+const responseBubble = document.getElementById('responseBubble');
+
+const cache = new Map();
+
+function setStatus(text) {
+  statusText.textContent = text;
+}
+
+function getKey(task, model) {
+  return `${task}::${model}`;
+}
+
+async function getGenerator(task, model) {
+  const key = getKey(task, model);
+  if (!cache.has(key)) {
+    setStatus(`Loading ${model}...`);
+    const p = pipeline(task, model).catch(err => {
+      cache.delete(key);
+      throw err;
+    });
+    cache.set(key, p);
+  }
+  return cache.get(key);
+}
+
+document.querySelectorAll('[data-model]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    modelInput.value = btn.getAttribute('data-model');
+    taskSelect.value = btn.getAttribute('data-task');
+  });
+});
+
+sendBtn.addEventListener('click', async () => {
+  const task = taskSelect.value.trim();
+  const model = modelInput.value.trim();
+  const query = queryInput.value.trim();
+
+  if (!model || !query) return;
+
+  responseBubble.textContent = '';
+  setStatus('Preparing model...');
+
+  try {
+    const generator = await getGenerator(task, model);
+    setStatus('Generating response...');
+
+    let output;
+    if (task === 'text-generation') {
+      output = await generator(query, {
+        max_new_tokens: 96,
+        do_sample: true,
+        temperature: 0.8,
+        top_p: 0.95
+      });
+      const full = output?.[0]?.generated_text || '';
+      responseBubble.textContent = full;
+    } else {
+      output = await generator(query, {
+        max_new_tokens: 96
+      });
+      const text = output?.[0]?.generated_text || output?.[0]?.summary_text || '';
+      responseBubble.textContent = text;
+    }
+
+    setStatus('Done');
+  } catch (err) {
+    setStatus('Error');
+    responseBubble.textContent = err?.message || String(err);
+  }
+});
+
+queryInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    sendBtn.click();
+  }
+});
+</script>
+</body>
+</html>

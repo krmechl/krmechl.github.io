@@ -17,6 +17,7 @@
 #chatHistory::-webkit-scrollbar {
   width: 8px;
 }
+
 #chatHistory::-webkit-scrollbar-thumb {
   background-color: #a0aec0;
   border-radius: 4px;
@@ -137,7 +138,7 @@ Ads
 </div>
 
 <div id="modelStatus">
-  <span>Model: DistilGPT2 --&gt;</span>
+  <span>Model: DistilGPT2  ➣  </span>
   <span id="modelStateText">Loading Model</span>
   <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
 </div>
@@ -638,7 +639,7 @@ async function fetchRelevantImage(query) {
       userMessages.map(m => `User: ${m.content}`).join('\n') +
       '\nAssistant:';
 
-    showDebug('Prompt:\n' + prompt);
+   
 
     const generator = await getGenerator();
     const result = await generator(prompt, {
