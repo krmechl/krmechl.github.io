@@ -138,7 +138,7 @@ Ads
 </div>
 
 <div id="modelStatus">
-  <span>Model: DistilGPT2  ➣  </span>
+  <span>Model: <span>Model: Xenova/LaMini-Flan-T5-783M  ➣   </span>
   <span id="modelStateText">Loading Model</span>
   <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
 </div>
@@ -311,7 +311,7 @@ async function fetchRelevantImage(query) {
     activeConversationId: 'chatApp_activeConversationId'
   };
 
-  const MODEL_ID = "Xenova/distilgpt2";
+  const MODEL_ID = "Xenova/LaMini-Flan-T5-783M";
 
   function showError(message) {
     errorPanel.textContent = message;
@@ -613,7 +613,7 @@ async function fetchRelevantImage(query) {
   async function getGenerator() {
     if (!generatorPromise) {
       setModelLoading();
-      generatorPromise = pipeline("text-generation", MODEL_ID).then(pipe => {
+     generatorPromise = pipeline("text2text-generation", MODEL_ID).then(pipe => {
         setModelReady();
         return pipe;
       }).catch(err => {
@@ -633,25 +633,20 @@ async function fetchRelevantImage(query) {
     }
   }
 
-  async function fetchDistilGPT2(messages) {
-    const userMessages = messages.filter(m => m.role === 'user');
-    const prompt =
-      userMessages.map(m => `User: ${m.content}`).join('\n') +
-      '\nAssistant:';
+ async function fetchDistilGPT2(messages) {
+  const userMessages = messages.filter(m => m.role === 'user');
+  const lastUser = userMessages[userMessages.length - 1]?.content || '';
 
-   
+  const prompt = `Answer the following question clearly and concisely:Always address the user as Sir\n${lastUser}`;
 
-    const generator = await getGenerator();
-    const result = await generator(prompt, {
-      max_new_tokens: 96,
-      do_sample: true,
-      temperature: 0.8,
-      top_p: 0.95
-    });
+  const generator = await getGenerator();
+  const result = await generator(prompt, {
+    max_new_tokens: 96
+  });
 
-    const full = result?.[0]?.generated_text || '';
-    return full.startsWith(prompt) ? full.slice(prompt.length).trim() : full.trim();
-  }
+  const text = result?.[0]?.generated_text || result?.[0]?.summary_text || '';
+  return text.trim();
+}
 
   newConversationBtn.addEventListener('click', createNewConversation);
 
