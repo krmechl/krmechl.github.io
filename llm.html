@@ -138,7 +138,7 @@ Ads
 </div>
 
 <div id="modelStatus">
-  <span>Model: <span>Model: Xenova/LaMini-Flan-T5-783M  ➣   </span>
+   <span>Model: Xenova/distilgpt2 ➣   </span>
   <span id="modelStateText">Loading Model</span>
   <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
 </div>
@@ -311,7 +311,7 @@ async function fetchRelevantImage(query) {
     activeConversationId: 'chatApp_activeConversationId'
   };
 
-  const MODEL_ID = "Xenova/LaMini-Flan-T5-783M";
+  const MODEL_ID = "Xenova/distilgpt2";
 
   function showError(message) {
     errorPanel.textContent = message;
@@ -613,7 +613,7 @@ async function fetchRelevantImage(query) {
   async function getGenerator() {
     if (!generatorPromise) {
       setModelLoading();
-     generatorPromise = pipeline("text2text-generation", MODEL_ID).then(pipe => {
+     generatorPromise = pipeline("text-generation", MODEL_ID).then(pipe => {
         setModelReady();
         return pipe;
       }).catch(err => {
