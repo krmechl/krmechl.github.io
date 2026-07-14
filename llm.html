@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -138,7 +139,7 @@ Ads
 </div>
 
 <div id="modelStatus">
-   <span>Model: Xenova/distilgpt2 ➣   </span>
+   <span>Model: HF TB/SmolLM2-360M-Instruct ➣   </span>
   <span id="modelStateText">Loading Model</span>
   <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
 </div>
@@ -311,7 +312,7 @@ async function fetchRelevantImage(query) {
     activeConversationId: 'chatApp_activeConversationId'
   };
 
-  const MODEL_ID = "Xenova/distilgpt2";
+  const MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct";
 
   function showError(message) {
     errorPanel.textContent = message;
@@ -637,7 +638,17 @@ async function fetchRelevantImage(query) {
   const userMessages = messages.filter(m => m.role === 'user');
   const lastUser = userMessages[userMessages.length - 1]?.content || '';
 
-  const prompt = `Answer the following question clearly and concisely:Always address the user as Sir\n${lastUser}`;
+ const prompt = `
+You are a business analyst.
+
+Analyze the text below and answer using bullets only:
+- Company overview
+- Customer fit
+- Competitive strengths
+- Weaknesses or risks
+- Suggested actions
+
+`.trim();
 
   const generator = await getGenerator();
   const result = await generator(prompt, {

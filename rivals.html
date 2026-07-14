@@ -187,7 +187,7 @@ let generatorPromise = null;
 
 function getGenerator() {
   if (!generatorPromise) {
-    generatorPromise = pipeline("text-generation", "Xenova/distilgpt2");
+    generatorPromise = pipeline("text-generation", "HuggingFaceTB/SmolLM2-360M-Instruct");
   }
   return generatorPromise;
 }
