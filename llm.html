@@ -138,6 +138,13 @@ Ads
 </div>
 </div>
 
+<div id="modelStatus">
+   <span>Model ➣   </span>
+  <span id="modelStateText">Ready</span>
+  <img id="modelLoadSpinner" src="spinner.gif" alt="Loading">
+</div>
+<div id="errorPanel"></div>
+<div id="debugPanel"></div>
 
 <div id="chatHistory" class="flex-grow bg-white rounded shadow p-4 overflow-y-auto mb-4 min-h-[400px] max-h-[80vh]"></div>
 
@@ -587,7 +594,7 @@ async function fetchRelevantImage(query) {
 
   async function initModel() {
     setModelReady();
-    modelStateText.textContent = 'Ready for Groq requests';
+    modelStateText.textContent = 'Ready for requests';
   }
 
   async function fetchGroq(messages) {
@@ -620,7 +627,7 @@ async function fetchRelevantImage(query) {
       throw error;
     } finally {
       clearTimeout(timer);
-      modelStateText.textContent = 'Ready for Groq requests';
+      modelStateText.textContent = 'Ready for requests';
     }
   }
 
